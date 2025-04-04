@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Sticky Notes App</title>
+        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    </head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>Sticky Note</h1>
+            <div class="search-container">
+                <input type="text" class="search-bar" placeholder="Search notes...">
+                <!-- Filter dropdowns will be added here by JS -->
+            </div>
+            <div class="dark-mode-toggle">
+                <span>Dark Mode</span>
+                <div class="toggle-switch"></div>
+            </div>
+        </div>
+        
+        <!-- Toolbar Section -->
+        <div class="toolbar">
+            <button class="btn btn-primary">+ Add Note</button>
+        </div>
+        
+        <!-- Notes Grid - Initially Empty -->
+        <div class="notes-grid">
+            <!-- Notes will be created here via JavaScript -->
+        </div>
+        
+        <div class="status-bar">
+            0 notes • 0 pinned • Last saved: Today 2:45 PM
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
