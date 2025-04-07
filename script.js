@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.error('Failed to initialize IndexedDB:', error);
     });
 
-    loadNotes();
+    // loadNotes();
 
     //indexed db setup here 
     function setupIndexedDB() {
@@ -200,6 +200,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="color-option color-orange"></div>
                 <div class="color-option color-red"></div>
             </div>
+        <div class="text-color-options">
+            <div class="text-color-option text-black selected">A</div>
+            <div class="text-color-option text-blue">A</div>
+            <div class="text-color-option text-green">A</div>
+            <div class="text-color-option text-red">A</div>
+        </div>
             <div class="pin-note">📌</div>
         </div>
         <div class="resize-handle">◢</div>
@@ -214,6 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
             content: '<p>Type your note here...</p>',
             color,
             pinned: true,
+            textColor: '#000', // Default text color
             element: noteElement
         };
         
@@ -223,12 +230,95 @@ document.addEventListener('DOMContentLoaded', function() {
         saveNotes();
     }
     
+
+    const textColorStyles = document.createElement('style');
+textColorStyles.innerHTML = `
+    .text-color-options {
+        display: flex;
+        margin-right: 10px;
+    }
+    
+    .text-color-option {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        margin: 0 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-weight: bold;
+        border: 1px solid #ddd;
+    }
+    
+    .text-color-option.selected {
+        border: 2px solid #333;
+    }
+    
+    .text-black { color: #000; }
+    .text-blue { color: #2196F3; }
+    .text-green { color: #4CAF50; }
+    .text-red { color: #F44336; }
+    
+    body.dark-mode .text-color-option.selected {
+        border-color: #fff;
+    }
+`;
+document.head.appendChild(textColorStyles);
     // Set up event listeners for a note
     function setupNoteEventListeners(noteElement, noteObject) {
         const deleteBtn = noteElement.querySelector('.delete-note');
         const titleElement = noteElement.querySelector('.note-title');
         
-        // Replace the editable category with a dropdown if it exists
+        const textColorOptions = noteElement.querySelectorAll('.text-color-option');
+
+        if (noteObject.textColor) {
+            // Apply the saved text color
+            noteElement.querySelector('.note-content').style.color = noteObject.textColor;
+            noteElement.querySelector('.note-title').style.color = noteObject.textColor;
+            
+            // Set the correct option as selected
+            textColorOptions.forEach(option => {
+                option.classList.remove('selected');
+                if (option.classList.contains(`text-${noteObject.textColor.replace('#', '')}`)) {
+                    option.classList.add('selected');
+                }
+            });
+        }
+
+        textColorOptions.forEach(textColorOption => {
+            textColorOption.addEventListener('click', function() {
+                const colorClass = this.className.split(' ')[1];
+                let textColor;
+                
+                // Map class names to actual colors
+                switch(colorClass) {
+                    case 'text-black': textColor = '#000'; break;
+                    case 'text-blue': textColor = '#2196F3'; break;
+                    case 'text-green': textColor = '#4CAF50'; break;
+                    case 'text-red': textColor = '#F44336'; break;
+                    default: textColor = '#000';
+                }
+                
+                // Apply color to note content and title
+                noteElement.querySelector('.note-content').style.color = textColor;
+                noteElement.querySelector('.note-title').style.color = textColor;
+                
+                // Save the text color in the note object
+                noteObject.textColor = textColor;
+                
+                // Remove 'selected' class from all text color options
+                textColorOptions.forEach(option => {
+                    option.classList.remove('selected');
+                });
+                
+                // Add 'selected' class to the clicked text color option
+                this.classList.add('selected');
+                
+                saveNotes();
+            });
+        });
+        // the editable category with a dropdown if it exists
         const oldCategoryElement = noteElement.querySelector('.note-category');
         if (oldCategoryElement) {
 
@@ -310,14 +400,92 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         // Delete note
         deleteBtn.addEventListener('click', function() {
-            if (confirm('Are you sure you want to delete this note?')) {
+            // Create confirmation dialog
+            const confirmDialog = document.createElement('div');
+            confirmDialog.className = 'delete-confirmation';
+            confirmDialog.innerHTML = `
+                <div class="delete-message">Are you sure you want to delete this note?</div>
+                <div class="delete-actions">
+                    <button class="delete-cancel">Cancel</button>
+                    <button class="delete-confirm">Delete</button>
+                </div>
+            `;
+            
+            // Position the dialog over the note
+            confirmDialog.style.position = 'absolute';
+            confirmDialog.style.top = '50%';
+            confirmDialog.style.left = '50%';
+            confirmDialog.style.transform = 'translate(-50%, -50%)';
+            confirmDialog.style.zIndex = '100';
+            
+            // Add the dialog to the note
+            noteElement.appendChild(confirmDialog);
+            
+            // Add event listeners to the buttons
+            confirmDialog.querySelector('.delete-cancel').addEventListener('click', function() {
+                confirmDialog.remove();
+            });
+            
+            confirmDialog.querySelector('.delete-confirm').addEventListener('click', function() {
                 noteElement.remove();
                 notes = notes.filter(note => note.id !== noteObject.id);
                 updateStatusBar();
-                saveNotes();  // Save notes when a note is deleted
-            }
+                saveNotes();
+            });
         });
         
+
+        const deleteDialogStyle = document.createElement('style');
+        deleteDialogStyle.innerHTML = `
+            .delete-confirmation {
+                background-color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                padding: 16px;
+                width: 80%;
+                max-width: 250px;
+            }
+            
+            .delete-message {
+                font-size: 14px;
+                margin-bottom: 12px;
+                text-align: center;
+            }
+            
+            .delete-actions {
+                display: flex;
+                justify-content: space-between;
+            }
+            
+            .delete-cancel, .delete-confirm {
+                padding: 6px 12px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            
+            .delete-cancel {
+                background-color: #f1f1f1;
+            }
+            
+            .delete-confirm {
+                background-color: #ff5252;
+                color: white;
+            }
+            
+            body.dark-mode .delete-confirmation {
+                background-color: #333;
+                color: #fff;
+            }
+            
+            body.dark-mode .delete-cancel {
+                background-color: #555;
+                color: #eee;
+            }
+        `;
+
+        document.head.appendChild(deleteDialogStyle);
+
         // Change note color
         colorOptions.forEach(colorOption => {
             colorOption.addEventListener('click', function() {
@@ -428,7 +596,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.head.appendChild(style);
     }
 
-    
     // Resizing functionality
     function startResize(e) {
         e.stopPropagation();
@@ -608,6 +775,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         category: note.category,
                         content: note.content,
                         color: note.color,
+                        textColor: note.textColor || '#000',
                         pinned: note.pinned,
                         width: note.element.style.width || '',
                         height: note.element.style.height || '',
@@ -678,10 +846,21 @@ function loadNotes() {
                                 <div class="color-option color-orange ${savedNote.color === 'orange' ? 'selected' : ''}"></div>
                                 <div class="color-option color-red ${savedNote.color === 'red' ? 'selected' : ''}"></div>
                             </div>
+                            <div class="text-color-options">
+                        <div class="text-color-option text-black ${!savedNote.textColor || savedNote.textColor === '#000' ? 'selected' : ''}">A</div>
+                        <div class="text-color-option text-blue ${savedNote.textColor === '#2196F3' ? 'selected' : ''}">A</div>
+                        <div class="text-color-option text-green ${savedNote.textColor === '#4CAF50' ? 'selected' : ''}">A</div>
+                        <div class="text-color-option text-red ${savedNote.textColor === '#F44336' ? 'selected' : ''}">A</div>
+                    </div>
                             <div class="pin-note">📌</div>
                         </div>
                         <div class="resize-handle">◢</div>
                     `;
+                    
+                    if (savedNote.textColor) {
+                        noteElement.querySelector('.note-content').style.color = savedNote.textColor;
+                        noteElement.querySelector('.note-title').style.color = savedNote.textColor;
+                    }
                     
                     // Set width and height if they exist
                     if (savedNote.width) {
@@ -708,6 +887,7 @@ function loadNotes() {
                         content: savedNote.content,
                         color: savedNote.color,
                         pinned: savedNote.pinned,
+                        textColor: savedNote.textColor || '#000',
                         position: savedNote.position,
                         element: noteElement,
                     };
@@ -729,6 +909,7 @@ function loadNotes() {
         console.error('Failed to load notes:', error);
     });
 }
+
 
     // Add CSS for fullscreen and note styling
     const fullscreenStyle = document.createElement('style');
