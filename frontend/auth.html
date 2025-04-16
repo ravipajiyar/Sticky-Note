@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Signup</title>
+    <link rel="stylesheet" href="style.css"> <!-- Link to your CSS file -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>  <!--  axios library added here -->
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-form">
+            <div class="form-header">
+                <h2 id="login-header" class="active-header">Login</h2>
+                <h2 id="signup-header">Signup</h2>
+                <div class="header-indicator"></div>
+            </div>
+
+            <form id="login-form">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="login-username" placeholder="Username" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="login-password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="submit-btn">Login</button>
+            </form>
+
+            <form id="signup-form" style="display: none;">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="signup-username" placeholder="Username" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="signup-password" placeholder="Password" required>
+                </div>
+                 <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="signup-confirm-password" placeholder="Confirm Password" required>
+                </div>
+                <button type="submit" class="submit-btn">Signup</button>
+            </form>
+
+            <div class="form-footer">
+                <p id="toggle-auth">Don't have an account? <a href="#" id="signup-link">Signup</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+            const loginHeader = document.getElementById('login-header');
+            const signupHeader = document.getElementById('signup-header');
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const toggleAuth = document.getElementById('toggle-auth');
+            const signupLink = document.getElementById('signup-link');
+            const headerIndicator = document.querySelector('.header-indicator');
+
+            // Function to switch to Signup form
+            function showSignupForm() {
+                loginHeader.classList.remove('active-header');
+                signupHeader.classList.add('active-header');
+                loginForm.style.display = 'none';
+                signupForm.style.display = 'block';
+                toggleAuth.innerHTML = 'Already have an account? <a href="#" id="login-link">Login</a>';
+
+                // Move header indicator
+                headerIndicator.style.transform = 'translateX(100%)';
+            }
+
+            // Function to switch to Login form
+            function showLoginForm() {
+                signupHeader.classList.remove('active-header');
+                loginHeader.classList.add('active-header');
+                signupForm.style.display = 'none';
+                loginForm.style.display = 'block';
+                toggleAuth.innerHTML = 'Don\'t have an account? <a href="#" id="signup-link">Signup</a>';
+
+                // Move header indicator
+                headerIndicator.style.transform = 'translateX(0)';
+            }
+
+            // Event listeners for header and toggle
+            signupHeader.addEventListener('click', showSignupForm);
+            loginHeader.addEventListener('click', showLoginForm);
+
+            toggleAuth.addEventListener('click', function(event) {
+                event.preventDefault();
+                if (loginForm.style.display === 'none') {
+                    showLoginForm();
+                } else {
+                    showSignupForm();
+                }
+            });
+            // Attach event listeners to the forms for submission.
+            loginForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const username = document.getElementById('login-username').value;
+                const password = document.getElementById('login-password').value;
+
+                // Make your API request here using 'username' and 'password'
+                try {
+                    const response = await axios.post('http://localhost:3001/auth/login', { username, password });
+
+                    if (response.status === 200) {
+                        // Login successful
+                        const token = response.data.token;
+                        localStorage.setItem('token', token);
+                        // Redirect to the main app page (index.html)
+                        window.location.href = 'index.html';
+                        // Show the app
+                        alert('Login successful!');
+                    } else {
+                        // Handle login error
+                        alert('Login failed. Please check your credentials.');
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    alert('Login failed. Please check your credentials.');
+                }
+            });
+    signupForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const username = document.getElementById('signup-username').value;
+        const password = document.getElementById('signup-password').value;
+        const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+        if (password !== confirmPassword) {
+            alert('Passwords do not match.');
+            return;
+        }
+
+        // Make your API request here using 'username' and 'password'
+        try {
+            const response = await axios.post('http://localhost:3001/auth/signup', { username, password });
+
+            if (response.status === 201) {
+                // Signup successful
+                alert('Signup successful! Please log in.');
+                // Redirect to login page
+                window.location.href = 'auth.html';
+                //showLoginForm(); // Switch to the login form
+            } else {
+                // Handle signup error
+                alert('Signup failed. Please try again.');
+            }
+        } catch (error) {
+            console.error('Signup error:', error);
+            alert('Signup failed. Please try again.');
+        }
+    });
+        });
+    </script>
+</body>
+</html>

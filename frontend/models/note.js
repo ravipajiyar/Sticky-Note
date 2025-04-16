@@ -35,7 +35,6 @@ class Note {
             };
         });
     }
-
     static saveNotes(notes) {
         return Note.setupIndexedDB().then(db => {
             const transaction = db.transaction(['notes'], 'readwrite');
