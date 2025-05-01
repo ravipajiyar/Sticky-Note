@@ -4,13 +4,12 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
+  const token = req.cookies.token;
+
 
   if (token == null) {
     return res.sendStatus(401); // No token
   }
-
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       console.error('JWT verification error:', err);
