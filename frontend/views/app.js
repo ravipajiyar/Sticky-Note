@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded',  function () {
     const statusBar = document.querySelector('.status-bar');
     const appContainer = document.querySelector('.app-container');
     const textColorToggle = document.querySelector('.text-color-toggle');
+    const darkModeToggle = document.querySelector('.dark-mode-toggle');
+    
 
     const controlsContainer = document.querySelector('.controls');
 
@@ -28,6 +30,9 @@ document.addEventListener('DOMContentLoaded',  function () {
     // State
     let notes = [];
     let darkMode = localStorage.getItem('darkMode') === 'true';
+    if (darkMode) {
+        document.body.classList.add('dark-mode');
+    }
 
     //Load the notes
     loadNotes();
@@ -337,17 +342,8 @@ function importNotes(event) {
         }, 5000);
     }
 
-    //Dark mode function
-    function toggleDarkMode() {
-        darkMode = !darkMode;
-        localStorage.setItem('darkMode', darkMode);
-
-        if (darkMode) {
-            document.body.classList.add('dark-mode');
-        } else {
-            document.body.classList.remove('dark-mode');
-        }
-    }
+  
+  
     function filterNotes() {
         const searchTerm = searchBar.value.toLowerCase();
         
@@ -963,27 +959,23 @@ document.addEventListener('click', (e) => {
         textColorToggle.classList.remove('active');
     }
 });
-    // Dark mode toggle
-   
 
-  //In index.js
-// Dark mode toggle
-const darkModeToggle = document.querySelector('.dark-mode-toggle');
 
-if (localStorage.getItem('darkMode') === 'true') {
-    document.body.classList.add('dark-mode');
-    darkMode = true;
-}
-function toggleDarkMode() {
+darkModeToggle.addEventListener('click', function() {
     darkMode = !darkMode;
     localStorage.setItem('darkMode', darkMode);
-    document.body.classList.toggle('dark-mode', darkMode);
-
+    
+    if (darkMode) {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode');
+    }
+    
     // Update all notes' text colors for better contrast in dark mode
     notes.forEach(note => {
         const noteContent = note.element.querySelector('.note-content');
         const noteTitle = note.element.querySelector('.note-title');
-
+        
         if (darkMode) {
             // Store original text color if not in dark mode already
             if (!note.element.dataset.originalTextColor) {
@@ -999,6 +991,6 @@ function toggleDarkMode() {
             noteTitle.style.color = originalColor;
         }
     });
-}
+});
 
 });

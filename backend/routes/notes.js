@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { connectDB } = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth'); // Import the middleware
 const sql = require('mssql');
 
 

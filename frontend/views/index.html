@@ -144,6 +144,7 @@
         const appContainer = document.querySelector('.app-container');
         const statusBar = document.querySelector('.status-bar');
         const logoutButton = document.getElementById('logoutButton');
+        const usernameElement = document.querySelector('.username'); // Get the username span element
     
         // Notification function
         function showNotification(message, type) {
@@ -213,7 +214,7 @@
     
         // Authentication Check with Cookie
         const checkAuthStatus = async () => {
-            console.log("we hav reached here.")
+            console.log("Checking authentication status...");
             try {
                 const response = await axios.post('http://localhost:3001/auth/google/token', {}, {
                     withCredentials: true
@@ -225,25 +226,28 @@
                     appContainer.style.display = 'flex'; // Ensure it's displayed
                     statusBar.textContent = 'Connected to StickyNotes+ service';
     
-                    // (Optional) Fetch user data if needed from the backend
-                    // Example: fetchUserData();
+                    // Update username in the UI with actual username from response
+                    if (response.data && response.data.user) {
+                        // Use displayName if available, otherwise username
+                        const displayedName = response.data.user.displayName || response.data.user.username;
+                        usernameElement.textContent = displayedName;
+                        console.log("Username updated:", displayedName);
+                    }
                 }
             } catch (error) {
                 // Authentication failed
-                console.log("User is not authenticated");
+                console.log("User is not authenticated", error);
                 window.location.href = 'auth.html';
             }
         };
     
-        // Call the function on page load
-        // await checkAuthStatus();
+        // Call the authentication check function on page load
+        checkAuthStatus();
     
         // Logout button event listener
         logoutButton.addEventListener('click', logout);
-    
     });
     </script>
 </body>
 
 </html>
-

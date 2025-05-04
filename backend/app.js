@@ -72,7 +72,7 @@ app.get('/test', (req, res) => {
   res.status(200).json({ status: 'success' });
 });
 
-
+// remove this and use from database config
 async function testConnection() {
   try {
     const dbConfig = {
