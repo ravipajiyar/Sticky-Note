@@ -4,7 +4,9 @@ document.addEventListener('DOMContentLoaded',  function () {
     const statusBar = document.querySelector('.status-bar');
     const appContainer = document.querySelector('.app-container');
     const textColorToggle = document.querySelector('.text-color-toggle');
+    const textColorOptionsContainer = document.querySelector('.text-color-options');
     const darkModeToggle = document.querySelector('.dark-mode-toggle');
+    const colorOptionsContainer = document.getElementById('colorOptionsContainer');
     
 
     const controlsContainer = document.querySelector('.controls');
@@ -32,6 +34,10 @@ document.addEventListener('DOMContentLoaded',  function () {
     let darkMode = localStorage.getItem('darkMode') === 'true';
     if (darkMode) {
         document.body.classList.add('dark-mode');
+        const toggleSwitch = document.querySelector('.dark-mode-toggle .toggle-switch');
+        if (toggleSwitch) {
+            toggleSwitch.classList.add('active');
+        }
     }
 
     //Load the notes
@@ -341,78 +347,50 @@ function importNotes(event) {
             }
         }, 5000);
     }
-
-  
-  
-    function filterNotes() {
-        const searchTerm = searchBar.value.toLowerCase();
+    function filterNotesByCategory(category) {
+        console.group('Filter Notes by Category');
+        console.log('Category:', category);
         
-        if (searchTerm) {
-            // Client-side filtering for already loaded notes
-            notes.forEach(note => {
-                const noteTitle = note.title.toLowerCase();
-                const noteContent = note.content.toLowerCase();
-                const noteCategory = note.category.toLowerCase();
-                
-                const isMatch = noteTitle.includes(searchTerm) || 
-                               noteContent.includes(searchTerm) || 
-                               noteCategory.includes(searchTerm);
-                
-                if (isMatch) {
-                    note.element.style.display = '';
-                } else {
-                    note.element.style.display = 'none';
-                }
-            });
-        } else {
-            // Reset and load first page
-            currentPage = 1;
-            hasMoreNotes = true;
-            loadNotes(1, false);
+        let odataFilter = '';
+        if (category && category !== 'All Notes' && category !== 'Recent') {
+            if (category === 'Pinned') {
+                odataFilter = 'pinned eq true';
+            } else {
+                // Proper OData syntax with single quotes
+                const escapedCategory = category.replace(/'/g, "''");
+                odataFilter = `category eq '${escapedCategory}'`;
+            }
         }
+        
+        console.log('Generated OData filter:', odataFilter);
+        console.groupEnd();
+        loadNotes(1, false, odataFilter, category);
     }
     
-    function filterNotesByCategory(category) {
-        // Reset active class on all links
-        categoryLinks.forEach(link => {
-            link.parentElement.classList.remove('active');
-        });
+    // Fix for filterNotes 
+    function filterNotes() {
+        const searchTerm = searchBar.value.toLowerCase();
+        let odataFilter = '';
         
-        notes.forEach(note => {
-            if (note.width) note.element.style.width = note.width;
-            if (note.height) note.element.style.height = note.height;
-        });
-        // Add active class to clicked link
-        if (event && event.currentTarget) {
-            event.currentTarget.parentElement.classList.add('active');
+        if (searchTerm) {
+            // Escape single quotes in search term for OData
+            const escapedSearchTerm = searchTerm.replace(/'/g, "''");
+            // Build valid OData filter
+            odataFilter = `contains(title, '${escapedSearchTerm}') or contains(content, '${escapedSearchTerm}') or contains(category, '${escapedSearchTerm}')`;
         }
         
-        if (category === 'All Notes') {
-            // Reset pagination and load first page
-            currentPage = 1;
-            hasMoreNotes = true;
-            loadNotes(1, false);
-        } else if (category === 'Pinned') {
-            // Filter existing notes for pinned ones (this is client-side filtering)
-            notes.forEach(note => {
-                note.element.style.display = note.pinned ? '' : 'none';
-            });
-        } else if (category === 'Recent') {
-            // Sort by most recent (assuming they're added in chronological order)
-            const recentNotes = [...notes].sort((a, b) => b.id - a.id).slice(0, 5);
-            const recentIds = recentNotes.map(note => note.id);
-            
-            notes.forEach(note => {
-                note.element.style.display = recentIds.includes(note.id) ? '' : 'none';
-            });
-        } else {
-            // Filter by specific category (Work, Personal, Ideas)
-            const categoryName = category.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
-            notes.forEach(note => {
-                note.element.style.display = note.category === categoryName ? '' : 'none';
-            });
-        }
+        // Remove encoding from here - will be encoded in loadNotes
+        console.log("OData Filter Search:", odataFilter);
+        
+        currentPage = 1;
+        hasMoreNotes = true;
+        loadNotes(1, false, odataFilter);
     }
+    
+
+   
+    
+  
     async function saveNotes() {
         //No need to save notes as backend is saving it
                 const date = new Date();
@@ -424,46 +402,54 @@ function importNotes(event) {
                 statusBar.textContent = statusBar.textContent.replace(/Last saved:.*/, `Last saved: Today ${timeString}`);
     }
 
-    async function loadNotes(page = 1, append = false) {
-        const cookies = document.cookie
-        const cookieJSON = Object.fromEntries(
-            cookies.split('; ').map(cookie => {
-              const [name, ...rest] = cookie.split('=');
-              return [name, rest.join('=')]; // join in case value contains '='
-            })
-          );
-        console.log("Token is this",cookieJSON)
+
+
+
+    async function loadNotes(page = 1, append = false, odataFilter = '', category = '') {
         try {
             if (isLoading || (!hasMoreNotes && page > 1)) return;
-            
+    
             isLoading = true;
-            
+    
             // Show loading indicator
             const loadingIndicator = document.getElementById('loading-indicator') || createLoadingIndicator();
             loadingIndicator.style.display = 'flex';
-            
-            // Make a GET request to fetch notes from the server with pagination
-            const response = await fetch(`http://localhost:3001/notes?page=${page}&limit=10`, {
+    
+            let url = `http://localhost:3001/notes?page=${page}&limit=10`;
+    
+            if (odataFilter) {
+                // Encode the filter string for URL here
+                const encodedFilter = encodeURIComponent(odataFilter);
+                url += `&$filter=${encodedFilter}`;
+            }
+    
+            console.log("Request URL:", url);
+    
+            const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    // 'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    credentials : "include"
+                    credentials: "include"
                 }
             });
     
             if (response.ok) {
                 const data = await response.json();
-                const savedNotes = data.notes;
-                
+                let savedNotes = data.notes;
+    
+                //Sort and filter for recent Category
+                if(category === "Recent"){
+                    savedNotes = savedNotes.sort((a, b) => b.id - a.id).slice(0,5);
+                }
+    
                 // Update pagination info
                 currentPage = data.currentPage;
                 hasMoreNotes = data.hasMore;
-                
+    
                 if (!append) {
                     notesGrid.innerHTML = '';
                     notes = [];
                 }
-                
+    
                 if (savedNotes && savedNotes.length > 0) {
                     const newNotes = savedNotes.map(savedNote => {
                         const note = new Note(
@@ -493,21 +479,21 @@ function importNotes(event) {
                         note.element = noteView.element;  // Store the element in the note object
                         return note;
                     });
-                    
+    
                     // Add new notes to the notes array
                     notes = [...notes, ...newNotes];
-                    
+    
                     // Append elements to grid
                     newNotes.forEach(note => notesGrid.appendChild(note.element));
-                    
+    
                     updateStatusBar();
-                    
+    
                     // If no more notes, hide loading indicator
                     if (!hasMoreNotes) {
                         loadingIndicator.style.display = 'none';
                     }
                 } else if (page === 1) {
-                    notesGrid.innerHTML = '<div class="no-notes">No notes found. Click the + button to create one!</div>';
+                    notesGrid.innerHTML = '<div class="no-notes">No notes found.</div>';
                     loadingIndicator.style.display = 'none';
                 }
             } else {
@@ -896,8 +882,8 @@ function importNotes(event) {
                     category: 'Personal',
                     content: '<p>Type your note here...</p>',
                     color: 'yellow',
-                    pinned: true,
-                    textColor: '#000',
+                    pinned: false,
+                    textColor: '#000000',
                     position: null,
                     width: '',
                     height: ''
@@ -907,13 +893,13 @@ function importNotes(event) {
             if (response.ok) {
                 const data = await response.json();
                 const newNote = new Note(
-                    data.noteId,  // Use the noteId from the server response
+                    data.noteId,
                     'Click to edit title',
                     'Personal',
                     '<p>Type your note here...</p>',
                     'yellow',
-                    true,
-                    '#000',
+                    false,
+                    '#000000',
                     null,
                     '',
                     ''
@@ -933,10 +919,10 @@ function importNotes(event) {
                 );
 
                 notes.push(newNote);
-                newNote.element = noteView.element;  // Store the element in the note object
+                newNote.element = noteView.element;
                 notesGrid.appendChild(noteView.element);
                 updateStatusBar();
-                saveNotes();  // Save notes after creating a new one
+                saveNotes();
             } else {
                 console.error('Failed to create note:', response.status);
                 showNotification('Failed to create note. Please try again.', 'error');
@@ -960,15 +946,29 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Add text color toggle event listener
+if (textColorToggle) {
+    textColorToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        textColorOptionsContainer.classList.toggle('hidden');
+        textColorToggle.classList.toggle('active');
+        // Close color options if open
+        colorOptionsContainer.classList.add('hidden');
+        colorToggle.classList.remove('active');
+    });
+}
 
 darkModeToggle.addEventListener('click', function() {
     darkMode = !darkMode;
     localStorage.setItem('darkMode', darkMode);
     
+    const toggleSwitch = this.querySelector('.toggle-switch');
     if (darkMode) {
         document.body.classList.add('dark-mode');
+        toggleSwitch.classList.add('active');
     } else {
         document.body.classList.remove('dark-mode');
+        toggleSwitch.classList.remove('active');
     }
     
     // Update all notes' text colors for better contrast in dark mode

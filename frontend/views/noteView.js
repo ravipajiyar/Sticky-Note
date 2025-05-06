@@ -1,5 +1,6 @@
 class NoteView {
     constructor(note, onDelete, onPin, onCategoryChange, onContentChange, onTitleChange, onColorChange, onResize, onTextColorChange, onDrag) {
+        console.log('NoteView constructor called with note:', note);
         this.note = note;
         this.onDelete = onDelete;
         this.onPin = onPin;
@@ -15,6 +16,7 @@ class NoteView {
     }
 
     createNoteElement(note) {
+        console.log('Creating note element for:', note);
         const noteElement = document.createElement('div');
         noteElement.className = `note note-${note.color}`;
         noteElement.innerHTML = `
@@ -32,25 +34,27 @@ class NoteView {
             </div>
             <div class="note-content" contenteditable="true" ${note.content === '<p>Type your note here...</p>' ? 'data-default="true"' : ''}>${note.content}</div>
             <div class="note-footer">
-                <div class="color-selector">
-                    <div class="color-toggle" title="Background Color">🎨</div>
-                    <div class="color-options hidden">
-                        <div class="color-option color-blue ${note.color === 'blue' ? 'selected' : ''}" title="Blue"></div>
-                        <div class="color-option color-green ${note.color === 'green' ? 'selected' : ''}" title="Green"></div>
-                        <div class="color-option color-yellow ${note.color === 'yellow' ? 'selected' : ''}" title="Yellow"></div>
-                        <div class="color-option color-orange ${note.color === 'orange' ? 'selected' : ''}" title="Orange"></div>
-                        <div class="color-option color-red ${note.color === 'red' ? 'selected' : ''}" title="Red"></div>
+                <div class="note-actions">
+                    <div class="color-selector">
+                        <div class="color-toggle" title="Background Color">🎨</div>
+                        <div class="color-options hidden">
+                            <div class="color-option color-blue ${note.color === 'blue' ? 'selected' : ''}" title="Blue"></div>
+                            <div class="color-option color-green ${note.color === 'green' ? 'selected' : ''}" title="Green"></div>
+                            <div class="color-option color-yellow ${note.color === 'yellow' ? 'selected' : ''}" title="Yellow"></div>
+                            <div class="color-option color-orange ${note.color === 'orange' ? 'selected' : ''}" title="Orange"></div>
+                            <div class="color-option color-red ${note.color === 'red' ? 'selected' : ''}" title="Red"></div>
+                        </div>
+                    </div>
+                    <div class="text-color-selector">
+                        <div class="text-color-toggle" title="Text Color">Aa</div>
+                        <div class="text-color-options hidden">
+                            <div class="text-color-option text-black ${!note.textColor || note.textColor === '#000' ? 'selected' : ''}" title="Black"></div>
+                            <div class="text-color-option text-blue ${note.textColor === '#2196F3' ? 'selected' : ''}" title="Blue"></div>
+                            <div class="text-color-option text-green ${note.textColor === '#4CAF50' ? 'selected' : ''}" title="Green"></div>
+                            <div class="text-color-option text-red ${note.textColor === '#F44336' ? 'selected' : ''}" title="Red"></div>
+                        </div>
                     </div>
                 </div>
-<div class="text-color-selector">
-    <div class="text-color-toggle" title="Text Color">Aa</div>
-    <div class="text-color-options hidden">
-        <div class="text-color-option text-black ${!note.textColor || note.textColor === '#000' ? 'selected' : ''}" title="Black"></div>
-        <div class="text-color-option text-blue ${note.textColor === '#2196F3' ? 'selected' : ''}" title="Blue"></div>
-        <div class="text-color-option text-green ${note.textColor === '#4CAF50' ? 'selected' : ''}" title="Green"></div>
-        <div class="text-color-option text-red ${note.textColor === '#F44336' ? 'selected' : ''}" title="Red"></div>
-    </div>
-</div>
                 <div class="resize-handle" title="Resize">◢</div>
             </div>
         `;
@@ -94,51 +98,123 @@ class NoteView {
     }
     setupEventListeners() {
         const noteElement = this.element;
-    const deleteBtn = noteElement.querySelector('.delete-note');
-    const titleElement = noteElement.querySelector('.note-title');
-    const categoryDropdown = noteElement.querySelector('.note-category-dropdown');
-    const contentElement = noteElement.querySelector('.note-content');
-    const colorOptions = noteElement.querySelectorAll('.color-option');
-    const pinElement = noteElement.querySelector('.pin-note');
-    const resizeHandle = noteElement.querySelector('.resize-handle');
-    const textColorOptions = noteElement.querySelectorAll('.text-color-option');
-    const colorToggle = noteElement.querySelector('.color-toggle');
-    const colorOptionsContainer = noteElement.querySelector('.color-options');
-    const textColorToggle = noteElement.querySelector('.text-color-toggle');
-    const textColorOptionsContainer = noteElement.querySelector('.text-color-options');
+        const deleteBtn = noteElement.querySelector('.delete-note');
+        const titleElement = noteElement.querySelector('.note-title');
+        const categoryDropdown = noteElement.querySelector('.note-category-dropdown');
+        const contentElement = noteElement.querySelector('.note-content');
+        const colorOptions = noteElement.querySelectorAll('.color-option');
+        const pinElement = noteElement.querySelector('.pin-note');
+        const resizeHandle = noteElement.querySelector('.resize-handle');
+        const textColorOptions = noteElement.querySelectorAll('.text-color-option');
+        const colorToggle = noteElement.querySelector('.color-toggle');
+        const colorOptionsContainer = noteElement.querySelector('.color-options');
+        const textColorToggle = noteElement.querySelector('.text-color-toggle');
+        const textColorOptionsContainer = noteElement.querySelector('.text-color-options');
 
+        // Background color toggle
+        colorToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            colorOptionsContainer.classList.toggle('hidden');
+            colorToggle.classList.toggle('active');
+            // Close text color options if open
+            textColorOptionsContainer.classList.add('hidden');
+            textColorToggle.classList.remove('active');
+        });
 
-    if (this.note.pinned) {
-        pinElement.classList.add('pinned');
-        pinElement.classList.remove('unpinned');
-    } else {
-        pinElement.classList.add('unpinned');
-        pinElement.classList.remove('pinned');
-    }
-
-    colorToggle.addEventListener('click', (e) => {
-        e.stopPropagation(); // Stop propagation to prevent document click handler
-        colorOptionsContainer.classList.toggle('hidden');
-        colorToggle.classList.toggle('active');
-        // Close text color options if open
-        textColorOptionsContainer.classList.add('hidden');
-        textColorToggle.classList.remove('active');
-    });
-    
-    // Text color toggle
-    textColorToggle.addEventListener('click', (e) => {
-        e.stopPropagation(); // Stop propagation to prevent document click handler
-        textColorOptionsContainer.classList.toggle('hidden');
-        textColorToggle.classList.toggle('active');
-        // Close background color options if open
-        colorOptionsContainer.classList.add('hidden');
-        colorToggle.classList.remove('active');
-    });
-    
-        // Toggle text color options visibility
-        textColorToggle.addEventListener('click', () => {
+        // Text color toggle
+        textColorToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
             textColorOptionsContainer.classList.toggle('hidden');
             textColorToggle.classList.toggle('active');
+            // Close background color options if open
+            colorOptionsContainer.classList.add('hidden');
+            colorToggle.classList.remove('active');
+        });
+
+        // Background color selection
+        colorOptions.forEach(colorOption => {
+            colorOption.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const colorClasses = colorOption.className.split(' ');
+                const colorClass = colorClasses.find(cls => cls.startsWith('color-'));
+                if (colorClass) {
+                    const colorName = colorClass.replace('color-', '');
+                    
+                    // Remove existing color class from note element
+                    const noteClasses = noteElement.className.split(' ');
+                    const filteredClasses = noteClasses.filter(cls => !cls.startsWith('note-') || cls === 'note');
+                    noteElement.className = [...filteredClasses, `note-${colorName}`].join(' ');
+                    
+                    // Update UI - remove selected class from all options
+                    colorOptions.forEach(opt => opt.classList.remove('selected'));
+                    colorOption.classList.add('selected');
+                    
+                    // Call controller function
+                    this.onColorChange(this.note.id, colorName);
+                    
+                    // Hide options after selection
+                    colorOptionsContainer.classList.add('hidden');
+                    colorToggle.classList.remove('active');
+                }
+            });
+        });
+
+        // Text color selection
+        textColorOptions.forEach(textColorOption => {
+            textColorOption.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const colorClasses = textColorOption.className.split(' ');
+                const colorClass = colorClasses.find(cls => cls.startsWith('text-'));
+                if (colorClass) {
+                    let textColor;
+                    switch (colorClass) {
+                        case 'text-black':
+                            textColor = '#000000';
+                            break;
+                        case 'text-blue':
+                            textColor = '#2196F3';
+                            break;
+                        case 'text-green':
+                            textColor = '#4CAF50';
+                            break;
+                        case 'text-red':
+                            textColor = '#F44336';
+                            break;
+                        default:
+                            textColor = '#000000';
+                    }
+                    
+                    // Apply color to note content and title
+                    if (contentElement) contentElement.style.color = textColor;
+                    if (titleElement) titleElement.style.color = textColor;
+                    
+                    // Store original text color for dark mode
+                    noteElement.dataset.originalTextColor = textColor;
+                    
+                    // Update UI state
+                    textColorOptions.forEach(opt => opt.classList.remove('selected'));
+                    textColorOption.classList.add('selected');
+                    
+                    // Call controller function
+                    this.onTextColorChange(this.note.id, textColor);
+                    
+                    // Hide options after selection
+                    textColorOptionsContainer.classList.add('hidden');
+                    textColorToggle.classList.remove('active');
+                }
+            });
+        });
+
+        // Close color pickers when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!colorOptionsContainer.contains(e.target) && e.target !== colorToggle) {
+                colorOptionsContainer.classList.add('hidden');
+                colorToggle.classList.remove('active');
+            }
+            if (!textColorOptionsContainer.contains(e.target) && e.target !== textColorToggle) {
+                textColorOptionsContainer.classList.add('hidden');
+                textColorToggle.classList.remove('active');
+            }
         });
 
         // Make title editable on click
@@ -181,51 +257,6 @@ class NoteView {
         categoryDropdown.addEventListener('change', () => {
             this.onCategoryChange(this.note.id, categoryDropdown.value);
         });
-        colorOptions.forEach(colorOption => {
-            colorOption.addEventListener('click', (e) => {
-                e.stopPropagation(); // Stop propagation
-                const colorClasses = colorOption.className.split(' ');
-                const colorClass = colorClasses.find(cls => cls.startsWith('color-'));
-                if (colorClass) {
-                    const colorName = colorClass.replace('color-', '');
-                    
-                    // Remove existing color class from note element
-                    const noteClasses = noteElement.className.split(' ');
-                    const filteredClasses = noteClasses.filter(cls => !cls.startsWith('note-') || cls === 'note');
-                    noteElement.className = [...filteredClasses, `note-${colorName}`].join(' ');
-                    
-                    // Call controller function
-                    this.onColorChange(this.note.id, colorName);
-                    
-                    // Update UI - remove selected class from all options
-                    colorOptions.forEach(opt => opt.classList.remove('selected'));
-                    colorOption.classList.add('selected');
-                    
-                    // Hide options after selection
-                    colorOptionsContainer.classList.add('hidden');
-                    colorToggle.classList.remove('active');
-                }
-            });
-        });
-        
-
-
-        pinElement.addEventListener('click', () => {
-            const newPinnedState = !this.note.pinned;
-            this.onPin(this.note.id, newPinnedState);
-            
-            // Update the UI immediately for better user experience
-            if (newPinnedState) {
-                pinElement.classList.add('pinned');
-                pinElement.classList.remove('unpinned');
-            } else {
-                pinElement.classList.add('unpinned');
-                pinElement.classList.remove('pinned');
-            }
-        });
-        // pinElement.addEventListener('click', () => {
-        //     this.onPin(this.note.id, !this.note.pinned);
-        // });
 
         // Make notes draggable - but only if not pinned
         $(noteElement).draggable({
@@ -295,66 +326,5 @@ class NoteView {
         };
 
         resizeHandle.addEventListener('mousedown', startResize);
-
-        textColorOptions.forEach(textColorOption => {
-            textColorOption.addEventListener('click', (e) => {
-                e.stopPropagation(); // Stop propagation
-                const colorClasses = textColorOption.className.split(' ');
-                const colorClass = colorClasses.find(cls => cls.startsWith('text-'));
-                if (colorClass) {
-                    let textColor;
-                    // Map class names to actual colors
-                    switch (colorClass) {
-                        case 'text-black':
-                            textColor = '#000';
-                            break;
-                        case 'text-blue':
-                            textColor = '#2196F3';
-                            break;
-                        case 'text-green':
-                            textColor = '#4CAF50';
-                            break;
-                        case 'text-red':
-                            textColor = '#F44336';
-                            break;
-                        default:
-                            textColor = '#000';
-                    }
-                    
-                    // Apply color to note content and title 
-                    const contentElement = noteElement.querySelector('.note-content');
-                    const titleElement = noteElement.querySelector('.note-title');
-                    
-                    if (contentElement) contentElement.style.color = textColor;
-                    if (titleElement) titleElement.style.color = textColor;
-                    
-                    // Call controller function
-                    this.onTextColorChange(this.note.id, textColor);
-                    
-                    // Update UI - remove selected class from all options
-                    textColorOptions.forEach(opt => opt.classList.remove('selected'));
-                    textColorOption.classList.add('selected');
-                    
-                    // Hide options after selection
-                    textColorOptionsContainer.classList.add('hidden');
-                    textColorToggle.classList.remove('active');
-                }
-            });
-        });
-        
-
-        // Hide text color options when clicking elsewhere
-        document.addEventListener('click', (e) => {
-            colorOptionsContainer.classList.add('hidden');
-    colorToggle.classList.remove('active');
-    textColorOptionsContainer.classList.add('hidden');
-    textColorToggle.classList.remove('active');
-            if (!colorOptionsContainer.contains(e.target) && e.target !== colorToggle) {
-                colorOptionsContainer.classList.add('hidden');
-            }
-            if (!textColorOptionsContainer.contains(e.target) && e.target !== textColorToggle) {
-                textColorOptionsContainer.classList.add('hidden');
-            }
-        });
     }
 }

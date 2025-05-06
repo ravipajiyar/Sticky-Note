@@ -287,6 +287,12 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+
+            setTimeout(() => {
+                clearLoginForm();
+                clearSignupForm();
+            }, 100);
+    
             // Clear form fields on page load
             document.getElementById('login-form').reset();
             document.getElementById('signup-form').reset();
@@ -299,6 +305,44 @@
             const loginLink = document.getElementById('login-link');
             const loginFooter = document.getElementById('login-footer');
             const signupFooter = document.getElementById('signup-footer');
+
+            function clearLoginForm() {
+        const usernameField = document.getElementById('login-username');
+        const passwordField = document.getElementById('login-password');
+        
+        // Clear values
+        usernameField.value = '';
+        passwordField.value = '';
+        
+        // Modify attributes to prevent autofill
+        usernameField.setAttribute('autocomplete', 'new-username');
+        passwordField.setAttribute('autocomplete', 'new-password');
+        
+        // This trick helps defeat browser autofill
+        usernameField.setAttribute('name', 'username_' + new Date().getTime());
+        passwordField.setAttribute('name', 'password_' + new Date().getTime());
+    }
+    
+    function clearSignupForm() {
+        const usernameField = document.getElementById('signup-username');
+        const passwordField = document.getElementById('signup-password');
+        const confirmPasswordField = document.getElementById('signup-confirm-password');
+        
+        // Clear values
+        usernameField.value = '';
+        passwordField.value = '';
+        confirmPasswordField.value = '';
+        
+        // Modify attributes to prevent autofill
+        usernameField.setAttribute('autocomplete', 'new-username');
+        passwordField.setAttribute('autocomplete', 'new-password');
+        confirmPasswordField.setAttribute('autocomplete', 'new-password');
+        
+        // This trick helps defeat browser autofill
+        usernameField.setAttribute('name', 'signup_username_' + new Date().getTime());
+        passwordField.setAttribute('name', 'signup_password_' + new Date().getTime());
+        confirmPasswordField.setAttribute('name', 'signup_confirm_' + new Date().getTime());
+    }
 
             function showLoginForm() {
                 loginTab.classList.add('active');
@@ -332,6 +376,20 @@
                 e.preventDefault();
                 showLoginForm();
             });
+
+            window.resetAuthForms = function() {
+        clearLoginForm();
+        clearSignupForm();
+    };
+    
+    // Enhanced pageshow handler
+    window.addEventListener('pageshow', function(event) {
+        // This will also clear the form on back button navigation
+        if (event.persisted) {
+            clearLoginForm();
+            clearSignupForm();
+        }
+    });
 
             // Google Authentication
             const googleLoginBtn = document.getElementById('google-login-btn');
