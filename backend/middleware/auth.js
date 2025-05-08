@@ -6,7 +6,6 @@ dotenv.config();
 function authenticateToken(req, res, next) {
   const token = req.cookies.token;
 
-
   if (token == null) {
     return res.sendStatus(401); // No token
   }

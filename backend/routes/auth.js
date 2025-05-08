@@ -90,7 +90,6 @@ router.get('/google/callback',
           maxAge: 1000 * 60 * 60 // Expires in 1 hour (adjust as needed)
       });
 
-      // ********** CHANGE IS HERE **********
       const redirectUrl = `http://localhost:3001/index.html`;
       console.log('Redirecting to:', redirectUrl); // Log redirect URL
       res.redirect(redirectUrl);
@@ -99,7 +98,6 @@ router.get('/google/callback',
 
 // Handle token validation from frontend
 router.post('/google/token', async (req, res) => {
-    // Token is not retrieved from request body anymore
     // const { token } = req.body;
     const token = req.cookies.token;
     console.log("This is the request ::",req.cookies.token)
@@ -176,7 +174,6 @@ router.post('/signup', async (req, res) => {
         const newUser = newUserResult.recordset[0];
 
         // Generate JWT token
-        // Generate JWT token
         const token = jwt.sign({ id: newUser.id, username: newUser.username }, process.env.JWT_SECRET, { expiresIn: '1000h' });//changed here
         res.status(201).json({ message: 'User created successfully', token: token });
     } catch (error) {
@@ -224,7 +221,6 @@ router.post('/login', async (req, res) => {
             maxAge: 1000 * 60 * 60 // Expires in 1 hour (adjust as needed)
         });
 
-        // ******  CHANGE IS HERE  *******
         console.log(`User "${username}" logged in successfully.`); // Display the username
 
         res.status(200).json({ message: 'Logged in successfully', token: token, username: username });//sending the username here

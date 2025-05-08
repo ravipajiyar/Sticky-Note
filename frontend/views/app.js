@@ -1,4 +1,56 @@
-document.addEventListener('DOMContentLoaded',  function () {
+document.addEventListener('DOMContentLoaded', function () {
+    // Add BatchManager class for efficient API calls
+    class BatchManager {
+        constructor(delay = 6000) {
+            this.delay = delay;
+            this.pendingUpdates = new Map();
+            this.timeoutId = null;
+        }
+
+        queueUpdate(noteId, updates) {
+            let noteUpdates = this.pendingUpdates.get(noteId) || {};
+            noteUpdates = { ...noteUpdates, ...updates };
+            this.pendingUpdates.set(noteId, noteUpdates);
+
+            if (this.timeoutId) {
+                clearTimeout(this.timeoutId);
+            }
+
+            this.timeoutId = setTimeout(() => this.processUpdates(), this.delay);
+        }
+
+        async processUpdates() {
+            if (this.pendingUpdates.size === 0) return;
+
+            try {
+                const batchedUpdates = Array.from(this.pendingUpdates.entries())
+                    .map(([noteId, updates]) => ({
+                        noteId,
+                        updates
+                    }));
+
+                this.pendingUpdates.clear();
+
+                for (const { noteId, updates } of batchedUpdates) {
+                    await fetch(`http://localhost:3001/notes/${noteId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify(updates)
+                    });
+                }
+            } catch (error) {
+                console.error('Error processing batched updates:', error);
+                showNotification('Some changes may not have been saved. Please try again.', 'error');
+            }
+        }
+    }
+
+    // Create single instance of BatchManager
+    const batchManager = new BatchManager();
+
     const floatingAddButton = document.getElementById('floatingAddButton');
     const notesGrid = document.querySelector('.notes-grid');
     const statusBar = document.querySelector('.status-bar');
@@ -407,49 +459,62 @@ function importNotes(event) {
 
     async function loadNotes(page = 1, append = false, odataFilter = '', category = '') {
         try {
-            if (isLoading || (!hasMoreNotes && page > 1)) return;
-    
+            if (isLoading || (!hasMoreNotes && page > 1)) {
+                const loadingIndicator = document.getElementById('loading-indicator');
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
+                return;
+            }
+
             isLoading = true;
-    
-            // Show loading indicator
             const loadingIndicator = document.getElementById('loading-indicator') || createLoadingIndicator();
             loadingIndicator.style.display = 'flex';
-    
+
+            // Store filter and category in sessionStorage to persist across reloads
+            if (page === 1) {
+                sessionStorage.setItem('currentFilter', odataFilter);
+                sessionStorage.setItem('currentCategory', category);
+            } else {
+                odataFilter = odataFilter || sessionStorage.getItem('currentFilter') || '';
+                category = category || sessionStorage.getItem('currentCategory') || '';
+            }
+
             let url = `http://localhost:3001/notes?page=${page}&limit=10`;
-    
             if (odataFilter) {
-                // Encode the filter string for URL here
                 const encodedFilter = encodeURIComponent(odataFilter);
                 url += `&$filter=${encodedFilter}`;
             }
-    
-            console.log("Request URL:", url);
-    
+
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     credentials: "include"
                 }
             });
-    
+
             if (response.ok) {
                 const data = await response.json();
                 let savedNotes = data.notes;
-    
-                //Sort and filter for recent Category
-                if(category === "Recent"){
-                    savedNotes = savedNotes.sort((a, b) => b.id - a.id).slice(0,5);
+
+                // Store total notes count in sessionStorage
+                sessionStorage.setItem('totalNotes', data.totalNotes);
+                sessionStorage.setItem('currentPage', page);
+
+                if (category === "Recent") {
+                    savedNotes = savedNotes.sort((a, b) => b.id - a.id).slice(0, 5);
                 }
-    
+
                 // Update pagination info
                 currentPage = data.currentPage;
                 hasMoreNotes = data.hasMore;
-    
-                if (!append) {
+
+                // Only clear if it's a new search/filter
+                if (!append && page === 1) {
                     notesGrid.innerHTML = '';
                     notes = [];
                 }
-    
+
                 if (savedNotes && savedNotes.length > 0) {
                     const newNotes = savedNotes.map(savedNote => {
                         const note = new Note(
@@ -464,6 +529,7 @@ function importNotes(event) {
                             savedNote.width,
                             savedNote.height
                         );
+
                         const noteView = new NoteView(
                             note,
                             deleteNote,
@@ -476,36 +542,40 @@ function importNotes(event) {
                             updateNoteTextColor,
                             dragNote
                         );
-                        note.element = noteView.element;  // Store the element in the note object
+                        note.element = noteView.element;
                         return note;
                     });
-    
-                    // Add new notes to the notes array
-                    notes = [...notes, ...newNotes];
-    
-                    // Append elements to grid
+
+                    notes = append ? [...notes, ...newNotes] : newNotes;
                     newNotes.forEach(note => notesGrid.appendChild(note.element));
-    
                     updateStatusBar();
-    
-                    // If no more notes, hide loading indicator
-                    if (!hasMoreNotes) {
-                        loadingIndicator.style.display = 'none';
-                    }
                 } else if (page === 1) {
-                    notesGrid.innerHTML = '<div class="no-notes">No notes found.</div>';
+                    notesGrid.innerHTML = '<div class="no-notes">No Notes Found !</div>';
+                }
+
+                // Always hide loading indicator after processing
+                if (loadingIndicator) {
                     loadingIndicator.style.display = 'none';
+                }
+
+                // If no more notes or received less than limit, set hasMoreNotes to false
+                if (!data.hasMore || savedNotes.length < 10) {
+                    hasMoreNotes = false;
                 }
             } else {
                 console.error('Failed to load notes:', response.status);
                 showNotification('Failed to load notes. Please try again.', 'error');
-                loadingIndicator.style.display = 'none';
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
             }
         } catch (error) {
             console.error('Error loading notes:', error);
             showNotification('Error loading notes. Please try again.', 'error');
             const loadingIndicator = document.getElementById('loading-indicator');
-            if (loadingIndicator) loadingIndicator.style.display = 'none';
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
         } finally {
             isLoading = false;
         }
@@ -600,262 +670,100 @@ function importNotes(event) {
         });
     }
 
-    // Controller function to update a note's pinned state
-    async function pinNote(noteId, pinned) {
-    try {
-        // Make a PUT request to update the pinned state of the note
-        const response = await fetch(`http://localhost:3001/notes/${noteId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                pinned: pinned
-            })
-        });
-
-        if (response.ok) {
-            const note = notes.find(note => note.id === noteId);
-            if (note) {
-                note.pinned = pinned;
-                updateStatusBar();
-                saveNotes(); // Save notes after pinning
-            }
-        } else {
-            console.error('Failed to update note:', response.status);
-            showNotification('Failed to update note. Please try again.', 'error');
-        }
-    } catch (error) {
-        console.error('Error updating note:', error);
-        showNotification('Error updating note. Please try again.', 'error');
-    }
-}
-
-
     // Controller function to update a note's category
     async function updateNoteCategory(noteId, category) {
-    try {
-        // Make a PUT request to update the category of the note
-        const response = await fetch(`http://localhost:3001/notes/${noteId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                category: category
-            })
-        });
-
-        if (response.ok) {
-            const note = notes.find(note => note.id === noteId);
-            if (note) {
-                note.category = category;
-                saveNotes(); // Save notes after category update
-            }
-        } else {
-            console.error('Failed to update note:', response.status);
-            showNotification('Failed to update note. Please try again.', 'error');
+        const note = notes.find(note => note.id === noteId);
+        if (note) {
+            note.category = category;
+            saveNotes();
+            batchManager.queueUpdate(noteId, { category });
         }
-    } catch (error) {
-        console.error('Error updating note:', error);
-        showNotification('Error updating note. Please try again.', 'error');
     }
-}
-
 
     // Controller function to update a note's content
     async function updateNoteContent(noteId, content) {
-    try {
-        // Make a PUT request to update the content of the note
-        const response = await fetch(`http://localhost:3001/notes/${noteId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                content: content
-            })
-        });
-
-        if (response.ok) {
-            const note = notes.find(note => note.id === noteId);
-            if (note) {
-                note.content = content;
-                saveNotes(); // Save notes after content update
-            }
-        } else {
-            console.error('Failed to update note:', response.status);
-            showNotification('Failed to update note. Please try again.', 'error');
+        const note = notes.find(note => note.id === noteId);
+        if (note) {
+            note.content = content;
+            saveNotes();
+            batchManager.queueUpdate(noteId, { content });
         }
-    } catch (error) {
-        console.error('Error updating note:', error);
-        showNotification('Error updating note. Please try again.', 'error');
     }
-}
-
 
     // Controller function to update a note's title
     async function updateNoteTitle(noteId, title) {
-    try {
-        // Make a PUT request to update the title of the note
-        const response = await fetch(`http://localhost:3001/notes/${noteId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                title: title
-            })
-        });
-
-        if (response.ok) {
-            const note = notes.find(note => note.id === noteId);
-            if (note) {
-                note.title = title;
-                saveNotes(); // Save notes after title update
-            }
-
-        } else {
-            console.error('Failed to update note:', response.status);
-            showNotification('Failed to update note. Please try again.', 'error');
+        const note = notes.find(note => note.id === noteId);
+        if (note) {
+            note.title = title;
+            saveNotes();
+            batchManager.queueUpdate(noteId, { title });
         }
-    } catch (error) {
-        console.error('Error updating note:', error);
-        showNotification('Error updating note. Please try again.', 'error');
     }
-}
 
     // Controller function to update a note's color
     async function updateNoteColor(noteId, color) {
-    try {
-        // Make a PUT request to update the color of the note
-        const response = await fetch(`http://localhost:3001/notes/${noteId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                color: color
-            })
-        });
-
-        if (response.ok) {
-            const note = notes.find(note => note.id === noteId);
-            if (note) {
-                note.color = color;
-                note.element.className = `note note-${note.color}`;  // Update the class
-                saveNotes(); // Save notes after color update
+        const note = notes.find(note => note.id === noteId);
+        if (note) {
+            note.color = color;
+            if (note.element) {
+                const classes = note.element.className
+                    .split(' ')
+                    .filter(cls => !cls.startsWith('note-') || cls === 'note');
+                note.element.className = [...classes, `note-${color}`].join(' ');
             }
-        } else {
-            console.error('Failed to update note:', response.status);
-            showNotification('Failed to update note. Please try again.', 'error');
+            saveNotes();
+            batchManager.queueUpdate(noteId, { color });
         }
-    } catch (error) {
-        console.error('Error updating note:', error);
-        showNotification('Error updating note. Please try again.', 'error');
     }
-}
+
+    // Controller function to update a note's text color
+    async function updateNoteTextColor(noteId, textColor) {
+        const note = notes.find(note => note.id === noteId);
+        if (note) {
+            note.textColor = textColor;
+            if (note.element) {
+                const contentEl = note.element.querySelector('.note-content');
+                const titleEl = note.element.querySelector('.note-title');
+                if (contentEl) contentEl.style.color = textColor;
+                if (titleEl) titleEl.style.color = textColor;
+                note.element.dataset.originalTextColor = textColor;
+            }
+            saveNotes();
+            batchManager.queueUpdate(noteId, { textColor });
+        }
+    }
+
+    // Controller function to update a note's pinned state
+    async function pinNote(noteId, pinned) {
+        const note = notes.find(note => note.id === noteId);
+        if (note) {
+            note.pinned = pinned;
+            updateStatusBar();
+            saveNotes();
+            batchManager.queueUpdate(noteId, { pinned });
+        }
+    }
 
     // Controller function to handle note resizing
     async function resizeNote(noteId, width, height) {
-    try {
-        // Make a PUT request to update the width and height of the note
-        const response = await fetch(`http://localhost:3001/notes/${noteId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                width: width,
-                height: height
-            })
-        });
-
-        if (response.ok) {
-            const note = notes.find(note => note.id === noteId);
-            if (note) {
-                note.width = width;
-                note.height = height;
-                saveNotes(); // Save notes after resize
-            }
-        } else {
-            console.error('Failed to update note:', response.status);
-            showNotification('Failed to update note. Please try again.', 'error');
+        const note = notes.find(note => note.id === noteId);
+        if (note) {
+            note.width = width;
+            note.height = height;
+            saveNotes();
+            batchManager.queueUpdate(noteId, { width, height });
         }
-    } catch (error) {
-        console.error('Error updating note:', error);
-        showNotification('Error updating note. Please try again.', 'error');
     }
-}
-
-
-    async function updateNoteTextColor(noteId, textColor) {
-    try {
-        // Make a PUT request to update the textColor of the note
-        const response = await fetch(`http://localhost:3001/notes/${noteId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                textColor: textColor
-            })
-        });
-
-        if (response.ok) {
-            const note = notes.find(note => note.id === noteId);
-            if (note) {
-                note.textColor = textColor;
-                saveNotes(); // Save notes after text color update
-            }
-        } else {
-            console.error('Failed to update note:', response.status);
-            showNotification('Failed to update note. Please try again.', 'error');
-        }
-    } catch (error) {
-        console.error('Error updating note:', error);
-        showNotification('Error updating note. Please try again.', 'error');
-    }
-}
-
 
     // Controller function to handle note dragging
     async function dragNote(noteId, position) {
-    try {
-        // Make a PUT request to update the position of the note
-        const response = await fetch(`http://localhost:3001/notes/${noteId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                position: position
-            })
-        });
-
-        if (response.ok) {
-            const note = notes.find(note => note.id === noteId);
-            if (note) {
-                note.position = position;
-                saveNotes(); // Save notes after drag
-            }
-        } else {
-            console.error('Failed to update note:', response.status);
-            showNotification('Failed to update note. Please try again.', 'error');
+        const note = notes.find(note => note.id === noteId);
+        if (note) {
+            note.position = position;
+            saveNotes();
+            batchManager.queueUpdate(noteId, { position });
         }
-    } catch (error) {
-        console.error('Error updating note:', error);
-        showNotification('Error updating note. Please try again.', 'error');
     }
-}
 
      function updateStatusBar() {
         // No need to save to local storage, just update status bar
@@ -921,6 +829,12 @@ function importNotes(event) {
                 notes.push(newNote);
                 newNote.element = noteView.element;
                 notesGrid.appendChild(noteView.element);
+
+                const noNotesMessage = notesGrid.querySelector('.no-notes');
+                if (noNotesMessage) {
+                     noNotesMessage.remove();
+                }
+
                 updateStatusBar();
                 saveNotes();
             } else {

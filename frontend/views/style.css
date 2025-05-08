@@ -322,6 +322,8 @@ body {
     cursor: grab;
     border: 1px solid var(--border-color);
     width: 100%; /* Make notes fill their grid cell */
+    position: relative;
+    overflow: visible; /* Allow color options to overflow */
 }
 
 .note-header {
@@ -353,8 +355,9 @@ body {
 /*}*/
 .note-actions {
     display: flex;
-    gap: 8px;
-    margin-left: auto;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .pin-note,
@@ -410,44 +413,128 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 10px;
+    padding: 10px;
     border-top: 1px solid var(--border-color);
     margin-top: 10px;
+    position: relative;
+    overflow: visible;
 }
 
-/*.color-palette {*/
-/*    display: flex;*/
-/*    gap: 5px;*/
-/*}*/
+/* Color selector positioning */
+.color-selector {
+    position: relative;
+    display: inline-block;
+    margin-right: auto; /* Push to the left */
+}
+
+.color-options {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr); /* Display colors in a grid */
+    gap: 8px;
+    z-index: 1000;
+    margin-bottom: 8px;
+    min-width: 200px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.color-options.hidden, .text-color-options.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    pointer-events: none;
+}
+
+/* Dark mode support for color options */
+body.dark-mode .color-options {
+    background-color: #2d3748;
+    border: 1px solid #4a5568;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Text color selector positioning */
+.text-color-selector {
+    position: relative;
+    display: inline-block;
+    margin-left: auto; /* Push to the right */
+}
+
+/* Update the toggles to have consistent styling */
+.color-toggle, .text-color-toggle {
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.color-toggle:hover, .text-color-toggle:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.color-toggle.active, .text-color-toggle.active {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+/* Dark mode color toggle */
+body.dark-mode .color-toggle, 
+body.dark-mode .text-color-toggle {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .color-toggle:hover, 
+body.dark-mode .text-color-toggle:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-mode .color-toggle.active, 
+body.dark-mode .text-color-toggle.active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 .color-palette {
     display: flex;
     gap: 5px;
 }
 
 .color-option {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
     cursor: pointer;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
-    transition: transform 0.1s ease-in-out;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
 }
 
-.color-option:hover,
-.color-option.selected {
+.color-option:hover {
     transform: scale(1.1);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+.color-option.selected {
+    border-color: rgba(0, 0, 0, 0.4);
 }
 
 .color-yellow {
-    background-color: #fefcbf;
+    background-color: #fff9c4;
 }
 
 .color-blue {
-    background-color: #dbebfe;
+    background-color: #bbdefb;
 }
 
 .color-green {
-    background-color: #c6f6d5;
+    background-color: #c8e6c9;
 }
 
 .color-pink {
@@ -455,7 +542,11 @@ body {
 }
 
 .color-orange {
-    background-color: #fde68a;
+    background-color: #ffe0b2;
+}
+
+.color-red {
+    background-color: #ffcdd2;
 }
 
 /*.status-bar {*/
@@ -636,6 +727,7 @@ a {
 .color-selector, .text-color-selector {
     position: relative;
     display: inline-block;
+    margin-right: 10px;
 }
 
 .color-toggle, .text-color-toggle {
@@ -651,19 +743,18 @@ a {
 
 .color-options, .text-color-options {
     position: absolute;
-    bottom: 40px;
-    left: 0;
-    display: flex;
+    bottom: 100%; /* Position above the toggle button */
+    right: 0; /* Align with the right side of the text-color-selector */
     background: white;
-    border-radius: 4px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
     padding: 8px;
-    z-index: 1000;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    flex-wrap: wrap;
+    display: flex;
     gap: 6px;
-    visibility: visible;
-    opacity: 1;
+    z-index: 1000;
+    margin-bottom: 5px; /* Add some space between options and toggle */
+    transform-origin: bottom right;
+    transition: all 0.3s ease;
 }
 
 .color-options.hidden, .text-color-options.hidden {
@@ -680,6 +771,7 @@ a {
     cursor: pointer;
     border: 2px solid transparent;
     transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .color-option:hover, .text-color-option:hover {
@@ -688,9 +780,95 @@ a {
 }
 
 .color-option.selected, .text-color-option.selected {
-    border-color: #333;
+    border-color: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
 }
 
+.color-option.color-yellow {
+    background-color: #FCF3CF;
+}
+
+.color-option.color-blue {
+    background-color: #D4E6F1;
+}
+
+.color-option.color-green {
+    background-color: #D5F5E3;
+}
+
+.color-option.color-orange {
+    background-color: #FAE5D3;
+}
+
+.color-option.color-red {
+    background-color: #F5B7B1;
+}
+
+.text-color-option.text-black {
+    background-color: #000000;
+}
+
+.text-color-option.text-blue {
+    background-color: #2196F3;
+}
+
+.text-color-option.text-green {
+    background-color: #4CAF50;
+}
+
+.text-color-option.text-red {
+    background-color: #F44336;
+}
+
+body.dark-mode .color-options,
+body.dark-mode .text-color-options {
+    background-color: #2d3748;
+    border: 1px solid #4a5568;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .color-toggle,
+body.dark-mode .text-color-toggle {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .color-toggle.active,
+body.dark-mode .text-color-toggle.active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .color-option:hover,
+body.dark-mode .text-color-option:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+body.dark-mode .color-option.selected,
+body.dark-mode .text-color-option.selected {
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Note background colors */
+.note-yellow {
+    background-color: #FCF3CF !important;
+}
+
+.note-blue {
+    background-color: #D4E6F1 !important;
+}
+
+.note-green {
+    background-color: #D5F5E3 !important;
+}
+
+.note-orange {
+    background-color: #FAE5D3 !important;
+}
+
+.note-red {
+    background-color: #F5B7B1 !important;
+}
+
+/* Pin/Unpin Styling */
 .pin-note, .delete-note {
     cursor: pointer;
     font-size: 18px;
@@ -972,13 +1150,15 @@ body.dark-mode .hidden {
 .color-options, .text-color-options {
     display: flex;
     position: absolute;
-    bottom: 40px;
-    left: 5px;
+    bottom: 100%; /* Position above the toggle button */
+    right: 0; /* Align with the right side of the text-color-selector */
     background: white;
-    border-radius: 4px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    padding: 5px;
+    border-radius: 6px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    padding: 8px;
     z-index: 10;
+    margin-bottom: 5px; /* Add some space between options and toggle */
+    transform-origin: bottom right;
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
@@ -1199,15 +1379,17 @@ body.dark-mode .hidden {
 
 .text-color-options {
     position: absolute;
-    bottom: 30px;
-    left: 0;
-    background-color: white;
+    bottom: 100%; /* Position above the toggle button */
+    right: 0; /* Align with the right side of the text-color-selector */
+    background: white;
     border-radius: 6px;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
     padding: 8px;
     display: flex;
     gap: 6px;
     z-index: 100;
+    margin-bottom: 5px; /* Add some space between options and toggle */
+    transform-origin: bottom right;
     transition: all 0.3s ease;
 }
 
@@ -1225,6 +1407,7 @@ body.dark-mode .hidden {
     cursor: pointer;
     border: 2px solid transparent;
     transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .text-color-option:hover {
@@ -1267,6 +1450,7 @@ body.dark-mode .text-color-toggle.active {
 
 body.dark-mode .text-color-options {
     background-color: #2d3748;
+    border: 1px solid #4a5568;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
 }
 
@@ -1855,33 +2039,42 @@ body.dark-mode .text-color-toggle.active {
 }
 .loading-indicator {
     display: none;
-    flex-direction: column;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 10px 20px;
+    border-radius: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
     align-items: center;
-    justify-content: center;
-    padding: 20px;
-    margin: 20px auto;
-    width: 100%;
-    grid-column: 1 / -1; /* Make it span all columns in the grid */
+    gap: 10px;
+}
+
+.dark-mode .loading-indicator {
+    background-color: rgba(33, 33, 33, 0.9);
+    color: #fff;
 }
 
 .spinner {
-    width: 40px;
-    height: 40px;
-    margin: 0 auto 10px;
-    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ccc;
+    border-top-color: #333;
     border-radius: 50%;
-    border-top: 4px solid #3498db;
     animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.dark-mode .spinner {
+    border-color: #666;
+    border-top-color: #fff;
 }
 
-.dark-mode .spinner {
-    border: 4px solid rgba(255, 255, 255, 0.1);
-    border-top: 4px solid #3498db;
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .no-notes {

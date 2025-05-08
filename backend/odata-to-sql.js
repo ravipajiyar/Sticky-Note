@@ -1,6 +1,6 @@
 const sql = require('mssql');
 
-function translateODataToSql(odataFilter) { // Remove securityContext parameter
+function translateODataToSql(odataFilter) { 
     let whereClause = '';
     const parameters = {};
     let paramCount = 1;
@@ -101,11 +101,11 @@ function handleFunctionCall(node, parameters, paramCount) {
 
 function determineSqlType(value) {
     if (typeof value === 'number') {
-        return sql.Int;  // Remove array notation
+        return sql.Int;  
     } else if (typeof value === 'boolean' || value === 'true' || value === 'false') {
-        return sql.Bit;  // Remove array notation
+        return sql.Bit;  
     } else {
-        return sql.NVarChar;  // Remove array notation
+        return sql.NVarChar;  
     }
 }
 

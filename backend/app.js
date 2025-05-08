@@ -3,7 +3,6 @@ const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const notesRoutes = require('./routes/notes.js');
 const { connectDB } = require('./config/database');
-const sql = require('mssql');
 const dotenv = require('dotenv');
 const path = require('path');
 const passport = require('passport');
@@ -62,7 +61,6 @@ app.get('/index.html', (req, res) => {
     return res.redirect('/auth.html'); // Redirect to login page
   }
 
- 
   res.sendFile(path.join(staticFilesPath, 'index.html'));
 
 });
@@ -72,29 +70,10 @@ app.get('/test', (req, res) => {
   res.status(200).json({ status: 'success' });
 });
 
-// remove this and use from database config
-async function testConnection() {
-  try {
-    const dbConfig = {
-      server: process.env.DB_HOST,
-      database: process.env.DB_NAME,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      port: 1433,
-      options: {
-        encrypt: false,
-        trustServerCertificate: true
-      }
-    };
-    const pool = new sql.ConnectionPool(dbConfig);
-    await pool.connect();
-    console.log('✅ Database connection test: Success!');
-  } catch (error) {
-    console.error('❌ Database connection test: Failed!', error);
-  }
-}
-
-testConnection();
+// Test database connection using the connectDB function from database.js
+connectDB()
+  .then(() => console.log('✅ Database connection test: Success!'))
+  .catch(error => console.error('❌ Database connection test: Failed!', error));
 
 app.listen(port, () => {
   console.log(`🚀 Server is running on port ${port}`);

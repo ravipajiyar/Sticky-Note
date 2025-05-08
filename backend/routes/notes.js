@@ -14,12 +14,9 @@ router.get('/', authenticateToken, async (req, res) => {
         
         // Properly handle the OData filter - only decode if it exists
         let odataFilter = req.query.$filter ? decodeURIComponent(req.query.$filter) : '';
-        // Robustness: strip $filter= if present (in case frontend sends it)
         if (odataFilter.startsWith('$filter=')) {
             odataFilter = odataFilter.slice(8);
         }
-        
-        console.log('Received OData filter:', odataFilter);
         
         const pool = await connectDB();
         
@@ -28,18 +25,12 @@ router.get('/', authenticateToken, async (req, res) => {
         
         if (odataFilter) {
             try {
-                console.log('Parsing OData filter:', odataFilter);
                 const { where, parameters } = translateODataToSql(odataFilter);
-                console.log('Translated SQL WHERE clause:', where);
-
                 if (where) {
                     whereClause += ` AND (${where})`;
-                    
-                    // Add filter parameters to the params object
                     Object.assign(params, parameters);
                 }
             } catch (error) {
-                console.error('Error parsing OData filter:', error);
                 return res.status(400).json({ 
                     message: 'Invalid OData filter', 
                     error: error.message,
@@ -47,34 +38,46 @@ router.get('/', authenticateToken, async (req, res) => {
                 });
             }
         }
+
+        // First get total count
+        const countQuery = `
+            SELECT COUNT(*) as total
+            FROM notes
+            ${whereClause}
+        `;
         
-        let query = `
+        const countRequest = pool.request();
+        for (const [key, param] of Object.entries(params)) {
+            countRequest.input(key.replace('@', ''), param.type, param.value);
+        }
+        const countResult = await countRequest.query(countQuery);
+        const totalNotes = countResult.recordset[0].total;
+        
+        // Then fetch the actual notes for this page
+        const query = `
             SELECT id, title, category, content, color, pinned, textColor, position, width, height
             FROM notes
             ${whereClause}
-            ORDER BY id DESC
+            ORDER BY pinned DESC, id DESC
             OFFSET ${offset} ROWS
             FETCH NEXT ${limit} ROWS ONLY;
         `;
         
-        console.log("Full Query:", query);
-        console.log("Params: ", params);
-        
         const request = pool.request();
-        
-        // Add parameters to the request
         for (const [key, param] of Object.entries(params)) {
             request.input(key.replace('@', ''), param.type, param.value);
         }
         
         const result = await request.query(query);
         
-        const hasMore = result.recordset.length > limit;
-        const notes = hasMore ? result.recordset.slice(0, limit) : result.recordset;
+        const totalPages = Math.ceil(totalNotes / limit);
+        const hasMore = page < totalPages;
         
         res.status(200).json({
-            notes: notes,
+            notes: result.recordset,
             currentPage: page,
+            totalPages: totalPages,
+            totalNotes: totalNotes,
             hasMore: hasMore
         });
     } catch (error) {
