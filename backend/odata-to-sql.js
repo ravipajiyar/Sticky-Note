@@ -1,22 +1,41 @@
 const sql = require('mssql');
 
-function translateODataToSql(odataFilter) { 
-    let whereClause = '';
-    const parameters = {};
-    let paramCount = 1;
-
-    if (odataFilter) {
-        try {
-            const filterTree = parseOData(odataFilter);
-            console.log ("THis is fileter tree" ,filterTree)
-            whereClause = processNode(filterTree, parameters, paramCount);
-            console.log ("This is where clause, ",whereClause)
-        } catch (error) {
-            throw new Error(`Filter parsing failed: ${error.message}`);
-        }
+function translateODataToSql(odataFilter) {
+    if (!odataFilter) {
+        return { where: '', parameters: {} };
     }
 
-    return { where: whereClause, parameters: parameters };
+    console.log('Translating OData filter:', odataFilter);
+    
+    const parameters = {};
+    let paramCounter = 0;
+    let whereClause = odataFilter;
+    
+    // Match pattern (category eq 'value')
+    whereClause = whereClause.replace(/\(category\s+eq\s+'([^']*)'\)/g, (match, value) => {
+        const paramName = `p${paramCounter++}`;
+        parameters[paramName] = { type: sql.NVarChar, value: value };
+        return `(category = @${paramName})`;
+    });
+    
+    // Match pattern (pinned eq true)
+    whereClause = whereClause.replace(/\(pinned\s+eq\s+true\)/g, '(pinned = 1)');
+    
+    // Match pattern contains(field, 'value')
+    whereClause = whereClause.replace(/contains\((\w+),\s*'([^']*)'\)/g, (match, field, value) => {
+        const paramName = `p${paramCounter++}`;
+        parameters[paramName] = { type: sql.NVarChar, value: `%${value}%` };
+        return `(${field} LIKE @${paramName})`;
+    });
+    
+    // Replace logical operators
+    whereClause = whereClause.replace(/\s+and\s+/gi, ' AND ');
+    whereClause = whereClause.replace(/\s+or\s+/gi, ' OR ');
+    
+    console.log('Translated SQL WHERE clause:', whereClause);
+    console.log('SQL parameters:', parameters);
+    
+    return { where: whereClause, parameters };
 }
 function processNode(node, parameters, paramCount) {
     if (!node) {
@@ -85,11 +104,13 @@ function handleFunctionCall(node, parameters, paramCount) {
 
     switch (functionName) {
         case 'startswith':
-            return `${args[0]} LIKE ${args[1]} + '%'`;
+            return `LOWER(${args[0]}) LIKE LOWER(${args[1]}) + '%'`;
         case 'endswith':
-            return `${args[0]} LIKE '%' + ${args[1]}`;
+            return `LOWER(${args[0]}) LIKE '%' + LOWER(${args[1]})`;
         case 'contains':
-            return `${args[0]} LIKE '%' + ${args[1]} + '%'`;
+            const paramName = `@p${paramCount++}`;
+            parameters[paramName] = { type: sql.NVarChar, value: `%${args[1].value}%` };
+            return `LOWER(${args[0]}) LIKE LOWER(${paramName})`;
         case 'tolower':
             return `LOWER(${args[0]})`;
         case 'toupper':

@@ -1,18 +1,17 @@
-const express = require('express');
-const cors = require('cors');
+const express = require('express'); 
+const cors = require('cors'); 
 const authRoutes = require('./routes/auth');
 const notesRoutes = require('./routes/notes.js');
 const { connectDB } = require('./config/database');
 const dotenv = require('dotenv');
 const path = require('path');
 const passport = require('passport');
-const cookieParser = require('cookie-parser'); // Import cookie-parser
+const cookieParser = require('cookie-parser'); 
 
-dotenv.config();
+dotenv.config(); 
 
 const app = express();
 const port = 3001;
-
 
 app.use(cors({
   origin: ['http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:3001'],
@@ -21,27 +20,17 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Initialize passport
 app.use(passport.initialize());
 
-// Cookie parser middleware
+// Cookie parser middleware for incoming request
 app.use(cookieParser());
-
-
 
 const staticFilesPath = path.join(__dirname, '../frontend/views');
 app.use(express.static(staticFilesPath));
 console.log(staticFilesPath);
-
-const publicPath = path.join(__dirname, '../frontend/public');
-app.use(express.static(publicPath));
-
-app.use('/models', express.static(path.join(staticFilesPath, 'models')));
-app.use('/controller', express.static(path.join(staticFilesPath, 'controller')));
 
 
 // API Routes
@@ -60,17 +49,10 @@ app.get('/index.html', (req, res) => {
   if (!token) {
     return res.redirect('/auth.html'); // Redirect to login page
   }
-
   res.sendFile(path.join(staticFilesPath, 'index.html'));
 
 });
 
-
-app.get('/test', (req, res) => {
-  res.status(200).json({ status: 'success' });
-});
-
-// Test database connection using the connectDB function from database.js
 connectDB()
   .then(() => console.log('✅ Database connection test: Success!'))
   .catch(error => console.error('❌ Database connection test: Failed!', error));

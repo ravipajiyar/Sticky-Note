@@ -22,10 +22,6 @@
             display : flex;
         }
 
-        /* .app-container.authenticated {
-            display: flex;
-        } */
-        /* Notification styles */
         .notification {
             position: fixed;
             top: 20px;
@@ -124,21 +120,14 @@
         </main>
     </div>
 
-
-
-
-
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     
-    
-    <script src="/note.js">
-    </script> 
-    <script src="/noteView.js"></script>
-    <script src="/app.js">
-    </script>  
-    
+    <!-- Fix script paths and loading order -->
+    <script src="note.js"></script> 
+    <script src="noteView.js"></script>
+    <script src="app.js"></script>
+
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         const appContainer = document.querySelector('.app-container');
