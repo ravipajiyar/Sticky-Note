@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     
-    
         async setupIndexedDB() {
             try {
                 console.log('BatchManager: Starting database initialization');
